@@ -1,0 +1,16 @@
+{
+	"compatibility_date": "2025-10-08",
+	"main": "src/index.ts",
+	"name": "analytics-session",
+	"upload_source_maps": true,
+	"observability": {
+		"enabled": true
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "analytics-session",
+			"database_id": "ed157013-fb2c-4f37-829e-503086d3a8d6"
+		}
+	]
+}
